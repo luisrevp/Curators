@@ -52,7 +52,6 @@ public sealed class MediaCollection
     {
         if (this._media.Contains(mediaItem))
         {
-            Console.WriteLine("You're attempting to add a duplicated value");
             return;
         }
 
@@ -62,7 +61,6 @@ public sealed class MediaCollection
     {
         if (!this._media.Contains(mediaItem))
         {
-            Console.WriteLine("You're attempting to delete an item that doesn't exist!");
             return;
         }
 
