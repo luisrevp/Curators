@@ -14,7 +14,7 @@ public sealed class TagCollection
         this.MaxAmountOfTags = maxAmountOfTags ?? DefaultAmountOfTags;
     }
 
-    public void AddTags(List<TagId> tags)
+    public bool AddTags(List<TagId> tags)
     {
         ArgumentNullException.ThrowIfNull(tags);
 
@@ -25,55 +25,47 @@ public sealed class TagCollection
 
         // Allowing idempotency by removing duplicated entries if request is performed concurrently
         var newTags = tags.Distinct().ToList();
-        int totalAmountOfTags = newTags.Count + this._tags.Count;
+        int currentTagCount = this._tags.Count;
+        int totalAmountOfTags = newTags.Count + currentTagCount;
 
         if (totalAmountOfTags > MaxAmountOfTags)
         {
-            throw new InvalidOperationException("The total amount of tags exceeds the current threshold {}");
+            throw new ArgumentOutOfRangeException($"Can't hold more than {MaxAmountOfTags} tags");
         }
 
         foreach (var tag in newTags)
         {
             AddTag(tag);
         }
+
+        bool isThereChanges = currentTagCount != this._tags.Count;
+        
+        return isThereChanges;
     }
 
-    public void RemoveTags(List<TagId> tags)
+    public bool RemoveTags(List<TagId> tags)
     {
         ArgumentNullException.ThrowIfNull(tags);
 
-        if (this._tags.Count == 0)
+        int currentTagCount = this._tags.Count;
+
+        if (currentTagCount == 0)
         {
             throw new InvalidOperationException("The collection of tags is empty. Nothing can be removed");
         }
 
         var tagsToRemove = tags.Distinct();
-
+        
         foreach (var tag in tagsToRemove)
         {
             RemoveTag(tag);
         }
+
+        bool isThereChanges = currentTagCount != this._tags.Count;
+
+        return isThereChanges;
     }
 
-    public void AddTag(TagId tag)
-    {
-        if (!this._tags.Add(tag))
-        {
-            Console.WriteLine("Tag duplicated");
-            return;
-        }
-
-        Console.WriteLine("Tag added successfully!");
-    }
-
-    public void RemoveTag(TagId tag)
-    {
-        if (!this._tags.Remove(tag))
-        {
-            Console.WriteLine("Tag doesn't exist in your collection");
-            return;
-        }
-
-        Console.WriteLine("Tag removed successfully!");
-    }
+    public bool AddTag(TagId tag) => this._tags.Add(tag);
+    public bool RemoveTag(TagId tag) => this._tags.Remove(tag);
 }
