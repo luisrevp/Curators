@@ -11,7 +11,8 @@ public sealed class User : Entity<UserId>, IAggregateRoot
     public Email Email { get; private set; }
     public ProfileDetails ProfileDetails { get; private set; }
     public DateTime DoB { get; private set; }
-    public DateTime CreateAt { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
     public bool IsActive { get; private set; }
 
     // Relationships with child Entities in bounded context (for readonly props and fields)
@@ -30,22 +31,29 @@ public sealed class User : Entity<UserId>, IAggregateRoot
         this.Email = userParams.Email;
         this.ProfileDetails = userParams.ProfileDetails;
         this.DoB = userParams.DoB;
-        this.CreateAt = userParams.CreateAt;
         this.IsActive = userParams.IsActive;
+        this.CreatedAt = DateTime.UtcNow;
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
 
     #region Bounded actions for projects: exposed business logic
-    public void AddProject(Project project) => _portfolio.Add(project);
+    public void AddProject(Project project) 
+    {
+        this._portfolio.Add(project);
+        this.UpdatedAt = DateTime.UtcNow;
+    }
+
 
     public void DeleteProject(Project project)
     {
         if (!this._portfolio.Contains(project))
         {
-            return;
+            throw new InvalidOperationException($"Can't delete project \"{project.ProjectName}\" because it doesn't exist");
         }
 
-        _portfolio.Remove(project);
+        this._portfolio.Remove(project);
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
     public void AddExperience(ExperienceRecord experience)
@@ -64,7 +72,18 @@ public sealed class User : Entity<UserId>, IAggregateRoot
         }
 
         this._experience.Add(experience);
+        this.UpdatedAt = DateTime.UtcNow;
+    }
 
+    public void DeleteExperience(ExperienceRecord experience)
+    {
+        if (!this._experience.Contains(experience))
+        {
+            throw new InvalidOperationException($"Can't delete experience \"{experience.RoleName}\" because it doesn't exist");
+        }
+
+        this._experience.Remove(experience);
+        this.UpdatedAt = DateTime.UtcNow;
     }
     #endregion
 }
@@ -75,7 +94,6 @@ public sealed record CreateUserParameters(
     ProfileDetails ProfileDetails,
     Email Email,
     DateTime DoB,
-    DateTime CreateAt,
     bool IsActive
 );
 

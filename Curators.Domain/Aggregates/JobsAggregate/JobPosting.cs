@@ -1,7 +1,9 @@
-﻿using Curators.Domain.SeedWork;
-using Curators.Domain.ValueObjects;
+﻿using Curators.Domain.Aggregates.TagsAggregate;
 using Curators.Domain.Aggregates.UserAggregate;
-using Curators.Domain.Aggregates.TagsAggregate;
+using Curators.Domain.Enums;
+using Curators.Domain.SeedWork;
+using Curators.Domain.ValueObjects;
+using System.Runtime.CompilerServices;
 
 namespace Curators.Domain.Aggregates.JobsAggregate;
 
@@ -11,7 +13,7 @@ internal class JobPosting : Entity<JobId>, IAggregateRoot
     public UserId PostedBy { get; private set; }
     public string JobTitle { get; private set; }
     public string JobDescription { get; private set; }
-    public bool IsActive { get; private set; } = true;
+    public JobStatus Status { get; private set; } = JobStatus.Draft;
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public Money MinimumBudget { get; private set; }
@@ -32,75 +34,136 @@ internal class JobPosting : Entity<JobId>, IAggregateRoot
         this.HiringDates = parameters.HiringDates;
         this.Tags = parameters?.Tags ?? new(maxAmountOfTags: 6);
         this.CreatedAt = DateTime.UtcNow;
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
     public static JobPosting Create(JobPostingParameters parameters)
     {
         if (parameters.HiringDates.Start < DateTime.UtcNow)
-            throw new InvalidOperationException("Hiring dates should be placed after current date");
+            throw new ArgumentOutOfRangeException("Hiring dates should be placed after current date");
+
+        if (parameters.MinimumBudget.Amount > parameters.MaximumBudget.Amount)
+            throw new ArgumentOutOfRangeException("Minimum budget should be greater than maximum budget");
 
         if (!parameters.MaximumBudget.Currency.Equals(parameters.MinimumBudget.Currency))
             throw new InvalidOperationException("Currencies don't match for budgets");
 
-        if (parameters.MinimumBudget.Amount > parameters.MaximumBudget.Amount)
-            throw new InvalidOperationException("Minimum budget should be greater than maximum budget");
-
         return new JobPosting(parameters);
     }
 
-    public void DisableJob() => this.IsActive = false;
+    public void Draft()
+    {
+        this.Status = JobStatus.Draft;
+        this.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Active()
+    {
+        this.Status = JobStatus.Active;
+        this.UpdatedAt = DateTime.UtcNow;
+    }
 
     public void ChangeMinimumBudget(Money newMinimum)
     {
-        if (newMinimum == this.MinimumBudget)
+        if (this.Status is not (JobStatus.Paused or JobStatus.Draft))
         {
-            Console.WriteLine("Budgets are identical");
+            throw new InvalidOperationException($"Cannot change budget on a job if state is '{this.Status}'");
+        }
+
+        if (newMinimum.Equals(this.MinimumBudget))
+        {
             return;
         }
 
         this.MinimumBudget = newMinimum;
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
     public void ChangeMaximumBudget(Money newMaximum)
     {
-        if (newMaximum == this.MaximumBudget)
+        if (this.Status is not (JobStatus.Paused or JobStatus.Draft))
         {
-            Console.WriteLine("Budgets are identical");
+            throw new InvalidOperationException($"Cannot change budget on a job if state is '{this.Status}'");
+        }
+
+        if (newMaximum.Equals(this.MaximumBudget))
+        {
             return;
         }
 
         this.MaximumBudget = newMaximum;
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
     public void AddAplicant(UserId newApplicant)
     {
+        if (this.Status is not JobStatus.Active)
+        {
+            throw new InvalidOperationException($"Cannot add applicant if job state is '{this.Status}'");
+        }
+
         bool isApplicantAlreadyInPool = this._applicants.Contains(newApplicant);
 
         if (isApplicantAlreadyInPool)
         {
-            Console.WriteLine("Participant already applied for this job");
             return;
         }
 
         this._applicants.Add(newApplicant);
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
     public void RemoveApplicant(UserId applicant)
     {
+        if (this.Status is not JobStatus.Active)
+        {
+            throw new InvalidOperationException($"Cannot remove applicant if job state is '{this.Status}'");
+        }
+
         bool isApplicantAlreadyInPool = this._applicants.Contains(applicant);
 
         if (isApplicantAlreadyInPool)
         {
             // consider using domain event to notify other parts when this happened
             this._applicants.Remove(applicant);
-            Console.WriteLine("Applicant removed from participants pool");
         }
     }
 
-    public void AddTag(TagId tag) => this.Tags.AddTag(tag);
-    public void RemoveTag(TagId tag) => this.Tags.RemoveTag(tag);
-    public void AddTags(List<TagId> tags) => this.Tags.AddTags(tags);
-    public void RemoveTags(List<TagId> tags) => this.Tags.RemoveTags(tags);
+    public void AddTag(TagId tag)
+    {
+        if (!this.Tags.AddTag(tag))
+        {
+            return;
+        }
+
+        this.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveTag(TagId tag)
+    {
+        if (this.Tags.RemoveTag(tag))
+        {
+            return;
+        }
+
+        this.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AddTags(List<TagId> tags)
+    {
+        if (!this.Tags.AddTags(tags))
+        {
+            return;
+        }
+
+        this.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveTags(List<TagId> tags)
+    {
+        this.Tags.RemoveTags(tags);
+        this.UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public sealed record JobPostingParameters(

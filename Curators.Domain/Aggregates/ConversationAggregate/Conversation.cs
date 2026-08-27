@@ -16,10 +16,10 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
     public IReadOnlyCollection<Message> Messages => _messages.AsReadOnly();
     public bool IsArchived { get; private set; } = false;
     public string? InnerMessage { get; private set; } = null;
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
     public DateTime? LastMessageAt { get; private set; }
     public int MessageCount => _messages.Count;
-
-
 
     private Conversation(HashSet<UserId> members, Message? message) : base(ConversationId.Generate())
     {
@@ -29,9 +29,10 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
         {
             this._messages.Add(message);
         }
+
+        this.CreatedAt = DateTime.UtcNow;
+        this.UpdatedAt = DateTime.UtcNow;
     }
-
-
 
     public static Conversation Create(List<UserId> members, Message? message = null)
     {
@@ -57,7 +58,9 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
     public void ReplyTo(Message message, MessageId messageToReplyId)
     {
         if (this.IsArchived)
+        {
             throw new InvalidOperationException("Current conversation is archived and new messages are no valid");
+        }
 
         bool isMessageAuthorInConversation = this._members.Any(member => member == message.SenderId);
 
@@ -75,47 +78,72 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
     }
 
     public void AddParticipants(List<UserId> listOfParticipants)
-    {
-        if (listOfParticipants is null)
-            return;
-        
-        if (listOfParticipants.Count() == 0)
+    {   
+        if (listOfParticipants is null || listOfParticipants.Count == 0)
             throw new ArgumentException("You must add a recipient/target users");
 
-        var membersUnique = listOfParticipants.Distinct();
+        var membersUnique = listOfParticipants.Distinct().ToList();
+        var newMembersCount = membersUnique.Count;
+        var membersCount = this._members.Count;
 
-        bool isCapacityExceeded = (membersUnique.Count() + this._members.Count()) > MaxAmountOfMembers; 
+        bool isCapacityExceeded = (newMembersCount + membersCount) > MaxAmountOfMembers; 
 
         if (isCapacityExceeded)
         {
-            throw new ArgumentException($"Conversation can't hold more than {MaxAmountOfMembers} members");
+            throw new ArgumentOutOfRangeException(
+                paramName: nameof(listOfParticipants),
+                actualValue: listOfParticipants,
+                message: $"Conversation can't hold more than {MaxAmountOfMembers} members"
+            );
         }
 
         foreach (var id in membersUnique)
         {
-            if (this._members.Add(id))
-            {
-                Console.WriteLine($"Member with ID {id} added successfuly");
-            }
-            else
-            {
-                Console.WriteLine($"Member with ID {id} skipped for idempotency");
-            }
+            AddParticipant(id);
         }
+    }
+
+    public void RemoveParticipants(List<UserId> listOfParticipants)
+    {
+        if (listOfParticipants is null || listOfParticipants.Count == 0)
+            throw new ArgumentException("You must add a recipient/target users");
+
+        if (this._members.Count == 0)
+        {
+            throw new InvalidOperationException("There are no members in the current conversation");
+        }
+
+        foreach (var id in listOfParticipants.Distinct())
+        {
+            RemoveParticipant(id);
+        }
+    }
+
+    public void AddParticipant(UserId user)
+    {
+        if (this._members.Contains(user))
+        {
+            return;
+        }
+
+        this._members.Add(user);
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
     public void RemoveParticipant(UserId user)
     {
-        if (this._members.Contains(user))
+        if (!this._members.Contains(user))
         {
-            this._members.Remove(user);
             return;
         }
-
-        Console.WriteLine($"Couldn't remove user with ID {user}");
+        
+        this._members.Remove(user);
+        this.UpdatedAt = DateTime.UtcNow;
     }
 
-    public void ArchiveChat() => this.IsArchived = true;
+
+
+    public void Archive() => this.IsArchived = true;
 }
 
 public readonly record struct ConversationId(Guid Value)

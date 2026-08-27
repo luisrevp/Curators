@@ -1,12 +1,5 @@
 ﻿namespace Curators.Domain.Enums;
 
-public enum MessageStatus
-{
-    Sent,
-    Delivered,
-    Read
-}
-
 public enum BookingStatus
 {
     Pending,
@@ -14,6 +7,22 @@ public enum BookingStatus
     Completed,
     Canceled,
     NoShow
+}
+
+public enum JobStatus
+{
+    Draft,
+    Active,
+    Paused,
+    Closed,
+    Archived
+}
+
+public enum MessageStatus
+{
+    Sent,
+    Delivered,
+    Read
 }
 
 public enum PaymentStatus
