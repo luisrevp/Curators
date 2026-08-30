@@ -4,14 +4,8 @@ public sealed record DateRange
 {
     public DateTime Start { get; init; }
     public DateTime? End { get; init; }
+    public TimeSpan? ElapsedTime => End.HasValue ? End - Start : null;
 
-    // private constructor. Factory method in charge
-
-    private DateRange(DateTime startDate)
-    {
-        Start = startDate;
-        End = null;
-    }
     private DateRange(DateTime startDate, DateTime? endDate)
     {
         Start = startDate;
@@ -19,12 +13,9 @@ public sealed record DateRange
     }
 
     // Factory Method exposed for Object Instantiation
-    public static DateRange Create(DateTime startDate, DateTime? endDate)
+    public static DateRange Create(DateTime startDate, DateTime? endDate = null)
     {
-        if (endDate.HasValue || endDate is null)
-            return new DateRange(startDate);
-
-        if (startDate > endDate.Value)
+        if (endDate.HasValue && startDate > endDate.Value)
             throw new ArgumentOutOfRangeException(nameof(startDate), "Start date cannot be placed after the end date!");
 
         return new DateRange(startDate, endDate);

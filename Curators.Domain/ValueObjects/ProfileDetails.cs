@@ -28,6 +28,11 @@ public sealed record ProfileDetails
         List<Language>? languages = null
     )
     {
+        if (pronouns is not null && !Enum.IsDefined(pronouns.Value))
+        {
+            throw new ArgumentException("Invalid pronoun value", nameof(pronouns));
+        }
+
         return new ProfileDetails(
             address: address,
             profilePicture: profilePicture,
