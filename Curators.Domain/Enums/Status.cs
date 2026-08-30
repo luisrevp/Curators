@@ -4,6 +4,7 @@ public enum BookingStatus
 {
     Pending,
     Confirmed,
+    Rejected,
     Completed,
     Canceled,
     NoShow
@@ -27,11 +28,13 @@ public enum MessageStatus
 
 public enum PaymentStatus
 {
-    Unpaid,
+    Pending,
     Authorized,
-    Paid,
+    Completed,
     Failed,
-    Refunded
+    Refunded,
+    PartiallyRefunded,
+    Cancelled
 }
 
 public enum ServiceStatus
