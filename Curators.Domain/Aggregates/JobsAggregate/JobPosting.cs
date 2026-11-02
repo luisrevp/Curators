@@ -9,6 +9,7 @@ namespace Curators.Domain.Aggregates.JobsAggregate;
 
 internal class JobPosting : Entity<JobId>, IAggregateRoot
 {
+    public static readonly int MaxAmountOfTags = 6;
     private readonly List<UserId> _applicants = new();
     public UserId PostedBy { get; private set; }
     public string JobTitle { get; private set; }
@@ -32,7 +33,7 @@ internal class JobPosting : Entity<JobId>, IAggregateRoot
         this.MinimumBudget = parameters.MinimumBudget;
         this.MaximumBudget = parameters.MaximumBudget;
         this.HiringDates = parameters.HiringDates;
-        this.Tags = parameters?.Tags ?? new(maxAmountOfTags: 6);
+        this.Tags = parameters?.Tags ?? new(MaxAmountOfTags);
         this.CreatedAt = DateTime.UtcNow;
         this.UpdatedAt = DateTime.UtcNow;
     }

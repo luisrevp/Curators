@@ -2,23 +2,23 @@
 
 public sealed class MediaCollection
 {
-    private readonly int MaxAmountOfMedia;
-    private readonly int DefaultAmountOfMedia = 6;
-    private readonly List<MediaItem> _media = new();
-    public IReadOnlyCollection<MediaItem> Media => _media.AsReadOnly();
+    public readonly int MaxAmountOfMedia;
+    public readonly int DefaultAmountOfMedia = 6;
+    private readonly HashSet<MediaItem> _media = new();
+    public IReadOnlyCollection<MediaItem> Media => this._media;
 
     public MediaCollection(int? maxAmountOfMedia = null)
     {
         this.MaxAmountOfMedia = maxAmountOfMedia ?? DefaultAmountOfMedia;
     }
 
-    public void AddMediaItems(List<MediaItem> mediaItems)
+    public bool AddMediaItems(List<MediaItem> mediaItems)
     {
         ArgumentNullException.ThrowIfNull(mediaItems);
 
         var newMediaItems = mediaItems.DistinctBy(item => item.Metadata).ToList();
-
-        var amountOfItems = newMediaItems.Count + this._media.Count;
+        int currentMediaCount = this._media.Count;
+        var amountOfItems = currentMediaCount + newMediaItems.Count;
 
         if (amountOfItems > MaxAmountOfMedia)
         {
@@ -29,13 +29,17 @@ public sealed class MediaCollection
         {
             AddMedia(mediaItem);
         }
+
+        bool isThereChanges = currentMediaCount > this.Media.Count;
+        return isThereChanges;
     }
 
-    public void RemoveMediaItems(List<MediaItem> mediaItems)
+    public bool RemoveMediaItems(List<MediaItem> mediaItems)
     {
         ArgumentNullException.ThrowIfNull(mediaItems);
+        int currentMediaCount = this._media.Count;
 
-        if (this._media.Count == 0)
+        if (currentMediaCount == 0)
         {
             throw new InvalidOperationException("Items don't exist in your collection");
         }
@@ -46,24 +50,28 @@ public sealed class MediaCollection
         {
             RemoveMedia(mediaItem);
         }
+
+        bool isThereChanges = currentMediaCount < this.Media.Count;
+        return isThereChanges;
     }
 
-    internal void AddMedia(MediaItem mediaItem)
+    public bool AddMedia(MediaItem mediaItem)
     {
-        if (this._media.Contains(mediaItem))
+        if (this._media.Count == MaxAmountOfMedia)
         {
-            return;
+            throw new ArgumentOutOfRangeException($"Can't hold more than {MaxAmountOfMedia} media items");
         }
 
-        this._media.Add(mediaItem);
+        return this._media.Add(mediaItem);
     }
-    internal void RemoveMedia(MediaItem mediaItem)
+
+    public bool RemoveMedia(MediaItem mediaItem)
     {
-        if (!this._media.Contains(mediaItem))
+        if (this._media.Count == 0)
         {
-            return;
+            throw new InvalidOperationException("The collection of media items is empty. Nothing can be removed");
         }
 
-        this._media.Remove(mediaItem);
+        return this._media.Remove(mediaItem);
     }
 }

@@ -25,8 +25,8 @@ public sealed class Project : Entity<ProjectId>
         this.ProjectName = projectName;
         this.Description = description;
         this.Duration = duration;
-        this.Tags = tags ?? new(6);
-        this.Media = media ?? new(10);
+        this.Tags = tags ?? new(MaxAmountOfTags);
+        this.Media = media ?? new(MaxAmountOfMedia);
     }
 
     public static Project AddNew(

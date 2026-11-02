@@ -66,6 +66,23 @@ public sealed class TagCollection
         return isThereChanges;
     }
 
-    public bool AddTag(TagId tag) => this._tags.Add(tag);
-    public bool RemoveTag(TagId tag) => this._tags.Remove(tag);
+    public bool AddTag(TagId tag)
+    {
+        if (this.Tags.Count == MaxAmountOfTags)
+        {
+            throw new ArgumentOutOfRangeException($"Can't hold more than {MaxAmountOfTags} tags");
+        }
+
+        return this._tags.Add(tag);
+    }
+    public bool RemoveTag(TagId tag)
+    {
+
+        if (this.Tags.Count == 0)
+        {
+            throw new InvalidOperationException("The collection of tags is empty. Nothing can be removed");
+        }
+
+        return this._tags.Remove(tag);
+    }
 }
