@@ -13,7 +13,7 @@ public sealed class Message : Entity<MessageId>
     private const int MaxAmountOfMinutesForEdit = 20;
     private const int MessageMaxLength = 500;
     private static readonly List<string> AvailableFormats = 
-        ["pdf", "docx", "txt", "xlsx", "xls", "csv", "jpg", "jpeg", "png", "mp3", "m4a", "mp4", "mov"];
+        ["pdf", "docx", "txt", "xlsx", "xls", "csv", "jpg", "jpeg", "png", "mp3", "m4a", "mp4", "mov", "gif"];
 
     public UserId SenderId { get; }
     public string Content { get; private set; }
@@ -53,12 +53,18 @@ public sealed class Message : Entity<MessageId>
             this.Attachments.Clear();
         }
 
+        this.IsDeleted = true; // logical delete
         this.Content = "The message has been deleted by sender";
         this.ModifiedDate = DateTime.Now;
     }
 
     public void EditContent(string newMessageContent, List<MediaItem>? attachments = null)
     {
+        if (this.IsDeleted)
+        {
+            throw new InvalidOperationException("Can't edit a deleted message!");
+        }
+
         var currentTime = DateTime.Now;
         var timeDifferences = currentTime - SentDate;
         if (timeDifferences.Minutes > MaxAmountOfMinutesForEdit)
@@ -75,7 +81,7 @@ public sealed class Message : Entity<MessageId>
         this.ModifiedDate = DateTime.Now;
     }
 
-    public static void AddAttachments(List<MediaItem> attachments)
+    private static void AddAttachments(List<MediaItem> attachments)
     {
         if (attachments.Count > 0)
             throw new InvalidOperationException("You must provide at least 1 attachment");

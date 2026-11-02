@@ -79,6 +79,11 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
 
     public void AddParticipants(List<UserId> listOfParticipants)
     {   
+        if (this.IsArchived)
+        {
+            throw new InvalidOperationException("Current conversation is archived and can't include more participants");
+        }
+
         if (listOfParticipants is null || listOfParticipants.Count == 0)
             throw new ArgumentException("You must add a recipient/target users");
 
@@ -105,6 +110,11 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
 
     public void RemoveParticipants(List<UserId> listOfParticipants)
     {
+        if (this.IsArchived)
+        {
+            throw new InvalidOperationException("Conversation is archived. Invalid operation");
+        }
+
         if (listOfParticipants is null || listOfParticipants.Count == 0)
             throw new ArgumentException("You must add a recipient/target users");
 
@@ -121,6 +131,11 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
 
     public void AddParticipant(UserId user)
     {
+        if (this.IsArchived)
+        {
+            throw new InvalidOperationException("Current conversation is archived and can't include more participants");
+        }
+
         if (this._members.Contains(user))
         {
             return;
@@ -132,6 +147,11 @@ public sealed class Conversation : Entity<ConversationId>, IAggregateRoot
 
     public void RemoveParticipant(UserId user)
     {
+        if (this.IsArchived)
+        {
+            throw new InvalidOperationException("Conversation is archived. Invalid operation");
+        }
+
         if (!this._members.Contains(user))
         {
             return;
